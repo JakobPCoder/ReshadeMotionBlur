@@ -35,6 +35,13 @@ uniform float frametime < source = "frametime"; >;
 
 
 // UI
+uniform bool UI_ENABLE_CAMERA_POINT <
+    ui_tooltip = "Whether to enable the decreasing of blur the closer it gets to the Camera Point";
+    ui_label = "Enable Camera Point";
+    ui_category = "Camera Point";
+    ui_category_closed = true;
+> = true;
+
 uniform bool UI_SHOW_CROSSHAIR <
     ui_tooltip = "Whether to show the crosshair for Camera Point";
     ui_label = "Camera Point Crosshair";
@@ -66,33 +73,33 @@ uniform float UI_PIXEL_Y < __UNIFORM_SLIDER_INT1
     ui_category_closed = true;
 > = BUFFER_HEIGHT / 2;
 
-uniform float UI_GENERAL_MULT < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.01; ui_max = 2; ui_step = 0.01;
-    ui_tooltip = "Controls the overall blur amount";
-    ui_label = "General Mult";
-    ui_category = "Motion Blur";
-> = 1;
-
-uniform float UI_VELOCITY_MULT < __UNIFORM_SLIDER_INT1
-    ui_min = 0.01; ui_max = 2; ui_step = 0.01;
-    ui_tooltip = "Controls the blur amount due to velocity";
-    ui_label = "Velocity Mult";
-    ui_category = "Motion Blur";
-> = 1;
-
-uniform float UI_CAMERA_POINT_MULT < __UNIFORM_SLIDER_INT1
-    ui_min = 0.01; ui_max = 2; ui_step = 0.01;
-    ui_tooltip = "Controls the blur amount relative to the Camera Point";
-    ui_label = "Camera Point Mult";
-    ui_category = "Motion Blur";
-> = 1;
-
 uniform uint UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
     ui_min = 3; ui_max = 24; ui_step = 1;
     ui_tooltip = "The amount of frame samples gathered";
     ui_label = "Samples";
     ui_category = "Motion Blur";
 > = 6;
+
+uniform float UI_GENERAL_MULT < __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.01; ui_max = 5; ui_step = 0.01;
+    ui_tooltip = "Controls the overall blur amount";
+    ui_label = "General Mult";
+    ui_category = "Motion Blur";
+> = 1;
+
+uniform float UI_VELOCITY_MULT < __UNIFORM_SLIDER_INT1
+    ui_min = 0.01; ui_max = 5; ui_step = 0.01;
+    ui_tooltip = "Controls the blur amount due to velocity";
+    ui_label = "Velocity Mult";
+    ui_category = "Motion Blur";
+> = 1;
+
+uniform float UI_CAMERA_POINT_MULT < __UNIFORM_SLIDER_INT1
+    ui_min = 0.01; ui_max = 5; ui_step = 0.01;
+    ui_tooltip = "Controls the blur amount relative to the Camera Point";
+    ui_label = "Camera Point Mult";
+    ui_category = "Motion Blur";
+> = 1;
 
 
 //  Textures & Samplers
@@ -143,10 +150,11 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
     float l2 = length(currCoord - cameraPointCoord);
     float2 maxDist = max(float2(BUFFER_WIDTH, BUFFER_HEIGHT) - cameraPointCoord, cameraPointCoord);
     float l2Max = length(maxDist);
+    float cameraPointEq = !UI_ENABLE_CAMERA_POINT ? 1 : ((l2 * UI_CAMERA_POINT_MULT) / l2Max);
 
     float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
     float2 velocityTimed = (velocity * UI_VELOCITY_MULT) / frametime;
-    float2 blurDist = velocityTimed * 25 * UI_GENERAL_MULT * ((l2 * UI_CAMERA_POINT_MULT) / l2Max);
+    float2 blurDist = velocityTimed * 25 * UI_GENERAL_MULT * cameraPointEq;
     float2 sampleDist = blurDist / UI_BLUR_SAMPLES_MAX;
     int halfSamples = UI_BLUR_SAMPLES_MAX / 2;
 
