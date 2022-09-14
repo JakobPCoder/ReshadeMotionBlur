@@ -29,8 +29,6 @@
 //  Defines
 uniform float frametime < source = "frametime"; >;
 
-static const float2 maxCoord = float2(BUFFER_WIDTH, BUFFER_HEIGHT);
-
 #ifndef BUFFER_PIXEL_SIZE
     #define BUFFER_PIXEL_SIZE	ReShade::PixelSize
 #endif
@@ -128,8 +126,9 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 {
     float2 currCoord = position.xy;
     float2 cameraPointCoord = float2(UI_PIXEL_X, UI_PIXEL_Y);
-    float l2 = sqrt(dot((currCoord - cameraPointCoord), (currCoord - cameraPointCoord)));
-    float l2Max = sqrt(dot(maxCoord, maxCoord));
+    float l2 = length(currCoord - cameraPointCoord);
+    float2 maxDist = max(float2(BUFFER_WIDTH, BUFFER_HEIGHT) - cameraPointCoord, cameraPointCoord);
+    float l2Max = length(maxDist);
 
     float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
     float2 velocityTimed = velocity / frametime;
