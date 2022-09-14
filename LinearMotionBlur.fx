@@ -42,6 +42,14 @@ uniform bool UI_SHOW_CROSSHAIR <
     ui_category_closed = true;
 > = false;
 
+uniform float3 UI_CROSSHAIR_COLOR < __UNIFORM_COLOR_INT3
+    ui_min = 0; ui_max = 255; ui_step = 1;
+    ui_tooltip = "The color of the crosshair which shows the Camera Point";
+    ui_label = "Crosshair Color";
+    ui_category = "Camera Point";
+    ui_category_closed = true;
+> = 1;
+
 uniform float UI_PIXEL_X < __UNIFORM_SLIDER_INT1
     ui_min = 1; ui_max = BUFFER_WIDTH; ui_step = 1;
     ui_tooltip = "The Camera Point position on the X plane (width)";
@@ -58,10 +66,10 @@ uniform float UI_PIXEL_Y < __UNIFORM_SLIDER_INT1
     ui_category_closed = true;
 > = BUFFER_HEIGHT / 2;
 
-uniform float3 UI_CROSSHAIR_COLOR < __UNIFORM_COLOR_INT3
-    ui_min = 0; ui_max = 255; ui_step = 1;
-    ui_tooltip = "The color of the crosshair which shows the Camera Point";
-    ui_label = "Crosshair Color";
+uniform float UI_MULT < __UNIFORM_SLIDER_INT1
+    ui_min = 0.01; ui_max = 3; ui_step = 0.01;
+    ui_tooltip = "Increase in order to reduce the blur the closer it is to the Camera Point";
+    ui_label = "Camera Point Multipliyer";
     ui_category = "Camera Point";
     ui_category_closed = true;
 > = 1;
@@ -132,7 +140,7 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 
     float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
     float2 velocityTimed = velocity / frametime;
-    float2 blurDist = velocityTimed * 50 * UI_BLUR_LENGTH * (l2 / l2Max);
+    float2 blurDist = velocityTimed * 50 * UI_BLUR_LENGTH * (l2 / (l2Max * UI_MULT));
     float2 sampleDist = blurDist / UI_BLUR_SAMPLES_MAX;
     int halfSamples = UI_BLUR_SAMPLES_MAX / 2;
 
