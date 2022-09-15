@@ -145,12 +145,18 @@ float3 Crosshair(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Targ
 
 float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_Target
 {
-    float2 currCoord = position.xy;
-    float2 cameraPointCoord = float2(UI_PIXEL_X, UI_PIXEL_Y);
-    float l2 = length(currCoord - cameraPointCoord);
-    float2 maxDist = max(float2(BUFFER_WIDTH, BUFFER_HEIGHT) - cameraPointCoord, cameraPointCoord);
-    float l2Max = length(maxDist);
-    float cameraPointEq = !UI_ENABLE_CAMERA_POINT ? 1 : ((l2 * UI_CAMERA_POINT_MULT) / l2Max);
+    float cameraPointEq = 1;
+
+    if (UI_ENABLE_CAMERA_POINT)
+    {
+        float2 currCoord = position.xy;
+        float2 cameraPointCoord = float2(UI_PIXEL_X, UI_PIXEL_Y);
+        float l2 = length(currCoord - cameraPointCoord);
+        float2 maxDist = max(float2(BUFFER_WIDTH, BUFFER_HEIGHT) - cameraPointCoord, cameraPointCoord);
+        float l2Max = length(maxDist);
+
+        cameraPointEq = (l2 * UI_CAMERA_POINT_MULT) / l2Max;
+    }
 
     float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
     float2 velocityTimed = (velocity * UI_VELOCITY_MULT) / frametime;
