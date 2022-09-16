@@ -74,11 +74,11 @@ uniform float UI_PIXEL_Y < __UNIFORM_SLIDER_INT1
 > = BUFFER_HEIGHT / 2;
 
 uniform uint UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
-    ui_min = 3; ui_max = 24; ui_step = 1;
+    ui_min = 4; ui_max = 32; ui_step = 1;
     ui_tooltip = "The amount of frame samples gathered";
     ui_label = "Samples";
     ui_category = "Motion Blur";
-> = 6;
+> = 8;
 
 uniform float UI_GENERAL_MULT < __UNIFORM_SLIDER_FLOAT1
     ui_min = 0.01; ui_max = 5; ui_step = 0.01;
