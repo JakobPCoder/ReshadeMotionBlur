@@ -78,28 +78,15 @@ uniform uint UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
     ui_tooltip = "The amount of frame samples gathered";
     ui_label = "Samples";
     ui_category = "Motion Blur";
-> = 8;
+> = 16;
 
-uniform float UI_GENERAL_MULT < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.01; ui_max = 5; ui_step = 0.01;
+uniform float UI_BLUR_LENGTH < __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.01; ui_max = 1; ui_step = 0.01;
     ui_tooltip = "Controls the overall blur amount";
-    ui_label = "General Mult";
+    ui_label = "Blur Length";
     ui_category = "Motion Blur";
-> = 1;
+> = 0.5;
 
-uniform float UI_VELOCITY_MULT < __UNIFORM_SLIDER_INT1
-    ui_min = 0.01; ui_max = 5; ui_step = 0.01;
-    ui_tooltip = "Controls the blur amount due to velocity";
-    ui_label = "Velocity Mult";
-    ui_category = "Motion Blur";
-> = 1;
-
-uniform float UI_CAMERA_POINT_MULT < __UNIFORM_SLIDER_INT1
-    ui_min = 0.01; ui_max = 5; ui_step = 0.01;
-    ui_tooltip = "Controls the blur amount relative to the Camera Point";
-    ui_label = "Camera Point Mult";
-    ui_category = "Motion Blur";
-> = 1;
 
 
 //  Textures & Samplers
@@ -155,12 +142,12 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
         float2 maxDist = max(float2(BUFFER_WIDTH, BUFFER_HEIGHT) - cameraPointCoord, cameraPointCoord);
         float l2Max = length(maxDist);
 
-        cameraPointEq = (l2 * UI_CAMERA_POINT_MULT) / l2Max;
+        cameraPointEq = l2 / l2Max;
     }
 
     float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
-    float2 velocityTimed = (velocity * UI_VELOCITY_MULT) / frametime;
-    float2 blurDist = velocityTimed * 25 * UI_GENERAL_MULT * cameraPointEq;
+    float2 velocityTimed = velocity / frametime;
+    float2 blurDist = velocityTimed * 50 * UI_BLUR_LENGTH * cameraPointEq;
     float2 sampleDist = blurDist / UI_BLUR_SAMPLES_MAX;
     int halfSamples = UI_BLUR_SAMPLES_MAX / 2;
 
