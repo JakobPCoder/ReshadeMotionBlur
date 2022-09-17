@@ -35,11 +35,24 @@ uniform float frametime < source = "frametime"; >;
 
 
 // UI
+uniform uint UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
+    ui_min = 4; ui_max = 32; ui_step = 1;
+    ui_tooltip = "The amount of frame samples gathered";
+    ui_label = "Samples";
+    ui_category = "Motion Blur";
+> = 16;
+
+uniform float UI_BLUR_LENGTH < __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.01; ui_max = 1; ui_step = 0.01;
+    ui_tooltip = "Controls the overall blur amount";
+    ui_label = "Blur Length";
+    ui_category = "Motion Blur";
+> = 0.5;
+
 uniform bool UI_ENABLE_CAMERA_POINT <
     ui_tooltip = "Whether to enable the decreasing of blur the closer it gets to the Camera Point";
     ui_label = "Enable Camera Point";
-    ui_category = "Camera Point";
-    ui_category_closed = true;
+    ui_category = "Motion Blur";
 > = true;
 
 uniform bool UI_SHOW_CROSSHAIR <
@@ -54,7 +67,6 @@ uniform float3 UI_CROSSHAIR_COLOR < __UNIFORM_COLOR_INT3
     ui_tooltip = "The color of the crosshair which shows the Camera Point";
     ui_label = "Crosshair Color";
     ui_category = "Camera Point";
-    ui_category_closed = true;
 > = 1;
 
 uniform float UI_PIXEL_X < __UNIFORM_SLIDER_INT1
@@ -62,7 +74,6 @@ uniform float UI_PIXEL_X < __UNIFORM_SLIDER_INT1
     ui_tooltip = "The Camera Point position on the X plane (width)";
     ui_label = "Camera Point X-Position";
     ui_category = "Camera Point";
-    ui_category_closed = true;
 > = BUFFER_WIDTH / 2;
 
 uniform float UI_PIXEL_Y < __UNIFORM_SLIDER_INT1
@@ -70,22 +81,8 @@ uniform float UI_PIXEL_Y < __UNIFORM_SLIDER_INT1
     ui_tooltip = "The Camera Point position on the Y plane (height)";
     ui_label = "Camera Point Y-Position";
     ui_category = "Camera Point";
-    ui_category_closed = true;
 > = BUFFER_HEIGHT / 2;
 
-uniform uint UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
-    ui_min = 4; ui_max = 32; ui_step = 1;
-    ui_tooltip = "The amount of frame samples gathered";
-    ui_label = "Samples";
-    ui_category = "Motion Blur";
-> = 16;
-
-uniform float UI_BLUR_LENGTH < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.01; ui_max = 1; ui_step = 0.01;
-    ui_tooltip = "Controls the overall blur amount";
-    ui_label = "Blur Length";
-    ui_category = "Motion Blur";
-> = 0.5;
 
 
 
