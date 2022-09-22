@@ -1,9 +1,9 @@
 # README
-## Reshade Motion Blur 
-1. Use an up to date version nof [Reshade](https://reshade.me/)
-2. Intall either my [Motion Estimation Shader](https://github.com/JakobPCoder/ReshadeMotionEstimation), Marty McFly's (Pascal Gilcher's) version of the [Motion Estimation](https://gist.github.com/martymcmodding/69c775f844124ec2c71c37541801c053) shader or Ehsan's version [Motion Estimation](https://gist.github.com/mj-ehsan/4f60386e4eb7cb4cbb1f2087e4786f9a).
-3. Place ALL .fx and .fxh files from this Repo into your "PATH-TO_GAME/reshade-shaders/Shaders/" folder.
-4. When you are ingame, activate the Motion Estimation Shader you chose and place it above this shader, which you should also activate.
+## Reshade Motion Blur
+1. Use an up to date version of [Reshade](https://reshade.me/)
+2. Download this shader and Ehsan's [Motion Vectors](https://gist.github.com/mj-ehsan/4f60386e4eb7cb4cbb1f2087e4786f9a). Alternatively JakobPCoder's [Motion Estimation Shader](https://github.com/JakobPCoder/ReshadeMotionEstimation) or Marty McFly's [Motion Estimation](https://gist.github.com/martymcmodding/69c775f844124ec2c71c37541801c053) also works.
+3. Put both shaders in your Shaders folder.
+4. When you are ingame, activate both shaders and place the "Motion Vectors/Estimation" above "LinearMotionBlur".
 5. Have Fun!
 
 <br /><br />

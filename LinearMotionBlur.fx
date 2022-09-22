@@ -14,9 +14,6 @@
  * - Non Commercial - 
  * You may not use the material for commercial purposes.
  *
- * - No Derivatives - 
- * If you remix, transform, or build upon the material, you may not distribute the modified material.
- *
  * https://creativecommons.org/licenses/by-nc-nd/4.0/
  */
 
@@ -35,25 +32,25 @@ uniform float frametime < source = "frametime"; >;
 
 
 // UI
-uniform uint UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
-    ui_min = 4; ui_max = 32; ui_step = 1;
-    ui_tooltip = "The amount of frame samples gathered";
-    ui_label = "Samples";
-    ui_category = "Motion Blur";
-> = 16;
-
-uniform float UI_BLUR_LENGTH < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.01; ui_max = 1; ui_step = 0.01;
-    ui_tooltip = "Controls the overall blur amount";
-    ui_label = "Blur Length";
-    ui_category = "Motion Blur";
-> = 0.5;
-
 uniform bool UI_ENABLE_CAMERA_POINT <
     ui_tooltip = "Whether to enable the decreasing of blur the closer it gets to the Camera Point";
     ui_label = "Enable Camera Point";
     ui_category = "Motion Blur";
 > = true;
+
+uniform uint UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
+    ui_min = 4; ui_max = 64; ui_step = 1;
+    ui_tooltip = "The amount of frame samples gathered";
+    ui_label = "Samples";
+    ui_category = "Motion Blur";
+> = 16;
+
+uniform uint UI_BLUR_LENGTH < __UNIFORM_SLIDER_INT1
+    ui_min = 1; ui_max = 100; ui_step = 1;
+    ui_tooltip = "Controls the overall blur amount";
+    ui_label = "Blur Length";
+    ui_category = "Motion Blur";
+> = 24;
 
 uniform bool UI_SHOW_CROSSHAIR <
     ui_tooltip = "Whether to show the crosshair for Camera Point";
@@ -82,8 +79,6 @@ uniform float UI_PIXEL_Y < __UNIFORM_SLIDER_INT1
     ui_label = "Camera Point Y-Position";
     ui_category = "Camera Point";
 > = BUFFER_HEIGHT / 2;
-
-
 
 
 //  Textures & Samplers
@@ -129,26 +124,25 @@ float3 Crosshair(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : SV_Targ
 
 float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_Target
 {
+    float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
+    float2 velocityTimed = velocity / frametime;
     float cameraPointEq = 1;
 
     if (UI_ENABLE_CAMERA_POINT)
     {
-        float2 currCoord = position.xy;
         float2 cameraPointCoord = float2(UI_PIXEL_X, UI_PIXEL_Y);
-        float l2 = length(currCoord - cameraPointCoord);
-        float2 maxDist = max(float2(BUFFER_WIDTH, BUFFER_HEIGHT) - cameraPointCoord, cameraPointCoord);
-        float l2Max = length(maxDist);
+        float l2 = length(position.xy - cameraPointCoord);
+        float l2Max = length(max(float2(BUFFER_WIDTH, BUFFER_HEIGHT) - cameraPointCoord, cameraPointCoord));
 
         cameraPointEq = l2 / l2Max;
     }
 
-    float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
-    float2 velocityTimed = velocity / frametime;
-    float2 blurDist = velocityTimed * 50 * UI_BLUR_LENGTH * cameraPointEq;
+    float2 blurDist = velocityTimed * cameraPointEq * UI_BLUR_LENGTH;
     float2 sampleDist = blurDist / UI_BLUR_SAMPLES_MAX;
     int halfSamples = UI_BLUR_SAMPLES_MAX / 2;
 
-    float4 summedSamples = 0.0;
+    float4 summedSamples = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
     for(int s = 0; s < UI_BLUR_SAMPLES_MAX; s++)
         summedSamples += tex2D(samplerColor, texcoord - sampleDist * (s - halfSamples)) / UI_BLUR_SAMPLES_MAX;
 
