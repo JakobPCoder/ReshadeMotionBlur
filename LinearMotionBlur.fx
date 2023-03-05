@@ -48,11 +48,22 @@ uniform int  UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
 	ui_category = "Motion Blur";
 > = 5;
 
+uniform float UI_TONEMAP_GAIN_SCALE <
+    ui_label = "HDR Gain Scale";
+    ui_min = 0.0;
+    ui_max = 2.0;
+    ui_step = 0.01;
+	ui_type = "slider";
+    ui_tooltip = 
+	"Scale the contribution of HDR gain to blurred pixels.\n"
+	"\n0.0 is basically LDR, while 2.0 is heavily boosted highlights.";
+    ui_category = "Motion Blur";
+> = 1.0;
+
 uniform bool UI_HQ_SAMPLING <
 	ui_label = "High Quality Resampling";	
 	ui_category = "Motion Blur";
 > = false;
-
 
 //  Textures & Samplers
 texture2D texColor : COLOR;
@@ -61,8 +72,8 @@ sampler samplerColor { Texture = texColor; AddressU = Clamp; AddressV = Clamp; M
 texture texMotionVectors          { Width = BUFFER_WIDTH;   Height = BUFFER_HEIGHT;   Format = RG16F; };
 sampler SamplerMotionVectors2 { Texture = texMotionVectors; AddressU = Clamp; AddressV = Clamp; MipFilter = Point; MinFilter = Point; MagFilter = Point; };
 
-
 // Passes
+
 float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_Target
 {	 
     float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
@@ -71,11 +82,30 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
     float2 sampleDist = blurDist / UI_BLUR_SAMPLES_MAX;
     int halfSamples = UI_BLUR_SAMPLES_MAX / 2;
 
-    float4 summedSamples = 0.0; 
+    float4 summedSamples = 0.0;
+    float4 currentSample = tex2D(samplerColor, texcoord);
+    float4 maxSample = currentSample;
     for(int s = 0; s < UI_BLUR_SAMPLES_MAX; s++)
-        summedSamples += tex2D(samplerColor, texcoord - sampleDist * (s - halfSamples)) / UI_BLUR_SAMPLES_MAX;
+    {
+        float4 sampled = tex2D(samplerColor, texcoord - sampleDist * (s - halfSamples));
+        summedSamples += sampled / UI_BLUR_SAMPLES_MAX;
+        maxSample.rgb = max(maxSample.rgb, sampled.rgb);
+    }
 
-    return summedSamples;
+    float4 tonemappedSample = maxSample;
+    float luminance = dot(tonemappedSample.rgb, float3(0.2126, 0.7152, 0.0722));
+    float exposure = log2(luminance * 4.0 + 1.0);
+
+    // Apply tone mapping only to blurred pixels
+    float3 blurredColor = tonemappedSample.rgb ;
+    float3 tonemappedColor = blurredColor / (blurredColor + 1.0);
+    tonemappedColor = clamp(tonemappedColor, 0.0, 1.0);
+    float3 finalColor = lerp(tonemappedColor, tonemappedSample.rgb, step(0.8, tonemappedColor));
+    tonemappedSample.rgb = lerp(blurredColor, finalColor, step(0.8, tonemappedColor));
+
+	float4 finalcolor = lerp(summedSamples, float4(tonemappedSample.rgb, maxSample.a), luminance * UI_TONEMAP_GAIN_SCALE);
+    finalcolor = clamp(finalcolor, 0.0, 1.0);
+    return finalcolor;
 }
 
 technique LinearMotionBlur
