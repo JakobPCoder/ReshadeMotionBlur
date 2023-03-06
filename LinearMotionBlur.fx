@@ -58,7 +58,7 @@ uniform float UI_TONEMAP_GAIN_SCALE <
 	"Scale the contribution of HDR gain to blurred pixels.\n"
 	"\n0.0 is basically LDR, while 2.0 is heavily boosted highlights.";
     ui_category = "Motion Blur";
-> = 1.0;
+> = 0.6;
 
 uniform bool UI_HQ_SAMPLING <
 	ui_label = "High Quality Resampling";	
