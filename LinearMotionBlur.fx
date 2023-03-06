@@ -58,7 +58,18 @@ uniform float UI_TONEMAP_GAIN_SCALE <
 	"Scale the contribution of HDR gain to blurred pixels.\n"
 	"\n0.0 is basically LDR, while 2.0 is heavily boosted highlights.";
     ui_category = "Motion Blur";
-> = 0.6;
+> = 1.0;
+
+uniform float UI_TONEMAP_GAIN_THRESHOLD <
+    ui_label = "HDR Gain Threshold";
+    ui_min = 0.0;
+    ui_max = 1.0;
+    ui_step = 0.01;
+	ui_type = "slider";
+    ui_tooltip = 
+	"Threshold value for the HDR gain. Pixels with luminance above this value will be boosted.";
+    ui_category = "Motion Blur";
+> = 0.85;
 
 uniform bool UI_HQ_SAMPLING <
 	ui_label = "High Quality Resampling";	
@@ -100,10 +111,10 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
     float3 blurredColor = tonemappedSample.rgb ;
     float3 tonemappedColor = blurredColor / (blurredColor + 1.0);
     tonemappedColor = clamp(tonemappedColor, 0.0, 1.0);
-    float3 finalColor = lerp(tonemappedColor, tonemappedSample.rgb, step(0.8, tonemappedColor));
-    tonemappedSample.rgb = lerp(blurredColor, finalColor, step(0.8, tonemappedColor));
+    float3 finalColor = lerp(tonemappedColor, tonemappedSample.rgb, step(UI_TONEMAP_GAIN_THRESHOLD, tonemappedColor));
+    tonemappedSample.rgb = lerp(blurredColor, finalColor, step(UI_TONEMAP_GAIN_THRESHOLD, tonemappedColor));
 
-	float4 finalcolor = lerp(summedSamples, float4(tonemappedSample.rgb, maxSample.a), luminance * UI_TONEMAP_GAIN_SCALE);
+	float4 finalcolor = lerp(summedSamples, float4(tonemappedSample.rgb, maxSample.a), step(UI_TONEMAP_GAIN_THRESHOLD, luminance) * luminance * UI_TONEMAP_GAIN_SCALE);
     finalcolor = clamp(finalcolor, 0.0, 1.0);
     return finalcolor;
 }
