@@ -71,6 +71,17 @@ uniform float UI_TONEMAP_GAIN_THRESHOLD <
     ui_category = "Motion Blur";
 > = 0.85;
 
+uniform float UI_TONEMAP_GAIN_THRESHOLD_SMOOTH <
+    ui_label = "HDR Gain Smoothness";
+    ui_min = 0.0;
+    ui_max = 0.3;
+    ui_step = 0.01;
+	ui_type = "slider";
+    ui_tooltip = 
+	"Smoothness value for the thresholding.";
+    ui_category = "Motion Blur";
+> = 0.15;
+
 uniform bool UI_HQ_SAMPLING <
 	ui_label = "High Quality Resampling";	
 	ui_category = "Motion Blur";
@@ -108,14 +119,14 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
     float exposure = log2(luminance * 4.0 + 1.0);
 
     // Apply tone mapping only to blurred pixels
-    float3 blurredColor = tonemappedSample.rgb ;
-    float3 tonemappedColor = blurredColor / (blurredColor + 1.0);
-    tonemappedColor = clamp(tonemappedColor, 0.0, 1.0);
-    float3 finalColor = lerp(tonemappedColor, tonemappedSample.rgb, step(UI_TONEMAP_GAIN_THRESHOLD, tonemappedColor));
-    tonemappedSample.rgb = lerp(blurredColor, finalColor, step(UI_TONEMAP_GAIN_THRESHOLD, tonemappedColor));
+	float3 blurredColor = tonemappedSample.rgb ;
+	float3 tonemappedColor = blurredColor / (blurredColor + 1.0);
+	tonemappedColor = clamp(tonemappedColor, 0.0, 1.0);
+	float3 finalColor = lerp(tonemappedColor, tonemappedSample.rgb, smoothstep(UI_TONEMAP_GAIN_THRESHOLD - UI_TONEMAP_GAIN_THRESHOLD_SMOOTH, UI_TONEMAP_GAIN_THRESHOLD, tonemappedColor));
+	tonemappedSample.rgb = lerp(blurredColor, finalColor, smoothstep(UI_TONEMAP_GAIN_THRESHOLD - UI_TONEMAP_GAIN_THRESHOLD_SMOOTH, UI_TONEMAP_GAIN_THRESHOLD, tonemappedColor));
 
-	float4 finalcolor = lerp(summedSamples, float4(tonemappedSample.rgb, maxSample.a), step(UI_TONEMAP_GAIN_THRESHOLD, luminance) * luminance * UI_TONEMAP_GAIN_SCALE);
-    finalcolor = clamp(finalcolor, 0.0, 1.0);
+	float4 finalcolor = lerp(summedSamples, float4(tonemappedSample.rgb, maxSample.a), smoothstep(UI_TONEMAP_GAIN_THRESHOLD - UI_TONEMAP_GAIN_THRESHOLD_SMOOTH, UI_TONEMAP_GAIN_THRESHOLD, luminance) * luminance * UI_TONEMAP_GAIN_SCALE);
+	finalcolor = clamp(finalcolor, 0.0, 1.0);
     return finalcolor;
 }
 
