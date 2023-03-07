@@ -69,7 +69,7 @@ uniform float UI_TONEMAP_GAIN_THRESHOLD <
     ui_tooltip = 
 	"Threshold value for the HDR gain. Pixels with luminance above this value will be boosted.";
     ui_category = "Motion Blur";
-> = 0.85;
+> = 0.95;
 
 uniform float UI_TONEMAP_GAIN_THRESHOLD_SMOOTH <
     ui_label = "HDR Gain Smoothness";
@@ -80,7 +80,7 @@ uniform float UI_TONEMAP_GAIN_THRESHOLD_SMOOTH <
     ui_tooltip = 
 	"Smoothness value for the thresholding.";
     ui_category = "Motion Blur";
-> = 0.15;
+> = 0.30;
 
 uniform bool UI_HQ_SAMPLING <
 	ui_label = "High Quality Resampling";	
