@@ -80,7 +80,7 @@ uniform float UI_TONEMAP_GAIN_THRESHOLD_SMOOTH <
     ui_tooltip = 
 	"Smoothness value for the thresholding.";
     ui_category = "Motion Blur";
-> = 0.49;
+> = 0.29;
 
 uniform bool UI_HQ_SAMPLING <
 	ui_label = "High Quality Resampling";	
