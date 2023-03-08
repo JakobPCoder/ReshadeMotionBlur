@@ -42,7 +42,7 @@ uniform float  UI_BLUR_LENGTH < __UNIFORM_SLIDER_FLOAT1
 > = 0.25;
 
 uniform int  UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
-	ui_min = 3; ui_max = 16; ui_step = 1;
+	ui_min = 3; ui_max = 32; ui_step = 1;
 	ui_tooltip = "";
 	ui_label = "Samples";
 	ui_category = "Motion Blur";
@@ -62,25 +62,25 @@ uniform float UI_TONEMAP_GAIN_SCALE <
 
 uniform float UI_TONEMAP_GAIN_THRESHOLD <
     ui_label = "HDR Gain Threshold";
-    ui_min = 0.0;
+    ui_min = 0.5;
     ui_max = 1.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Threshold value for the HDR gain. Pixels with luminance above this value will be boosted.";
     ui_category = "Motion Blur";
-> = 0.95;
+> = 0.99;
 
 uniform float UI_TONEMAP_GAIN_THRESHOLD_SMOOTH <
     ui_label = "HDR Gain Smoothness";
     ui_min = 0.0;
-    ui_max = 0.3;
+    ui_max = 0.5;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Smoothness value for the thresholding.";
     ui_category = "Motion Blur";
-> = 0.30;
+> = 0.49;
 
 uniform bool UI_HQ_SAMPLING <
 	ui_label = "High Quality Resampling";	
