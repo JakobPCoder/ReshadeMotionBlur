@@ -69,18 +69,18 @@ uniform float UI_TONEMAP_GAIN_THRESHOLD <
     ui_tooltip = 
 	"Threshold value for the HDR gain. Pixels with luminance above this value will be boosted.";
     ui_category = "Motion Blur";
-> = 0.99;
+> = 1.00;
 
 uniform float UI_TONEMAP_GAIN_THRESHOLD_SMOOTH <
     ui_label = "HDR Gain Smoothness";
     ui_min = 0.0;
-    ui_max = 0.5;
+    ui_max = 1.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Smoothness value for the thresholding.";
     ui_category = "Motion Blur";
-> = 0.29;
+> = 1.00;
 
 uniform bool UI_HQ_SAMPLING <
 	ui_label = "High Quality Resampling";	
@@ -116,14 +116,6 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 
     float4 tonemappedSample = maxSample;
     float luminance = dot(tonemappedSample.rgb, float3(0.2126, 0.7152, 0.0722));
-    float exposure = log2(luminance * 4.0 + 1.0);
-
-    // Apply tone mapping only to blurred pixels
-	float3 blurredColor = tonemappedSample.rgb ;
-	float3 tonemappedColor = blurredColor / (blurredColor + 1.0);
-	tonemappedColor = clamp(tonemappedColor, 0.0, 1.0);
-	float3 finalColor = lerp(tonemappedColor, tonemappedSample.rgb, smoothstep(UI_TONEMAP_GAIN_THRESHOLD - UI_TONEMAP_GAIN_THRESHOLD_SMOOTH, UI_TONEMAP_GAIN_THRESHOLD, tonemappedColor));
-	tonemappedSample.rgb = lerp(blurredColor, finalColor, smoothstep(UI_TONEMAP_GAIN_THRESHOLD - UI_TONEMAP_GAIN_THRESHOLD_SMOOTH, UI_TONEMAP_GAIN_THRESHOLD, tonemappedColor));
 
 	float4 finalcolor = lerp(summedSamples, float4(tonemappedSample.rgb, maxSample.a), smoothstep(UI_TONEMAP_GAIN_THRESHOLD - UI_TONEMAP_GAIN_THRESHOLD_SMOOTH, UI_TONEMAP_GAIN_THRESHOLD, luminance) * luminance * UI_TONEMAP_GAIN_SCALE);
 	finalcolor = clamp(finalcolor, 0.0, 1.0);
