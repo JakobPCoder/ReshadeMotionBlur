@@ -117,7 +117,7 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
     float4 tonemappedSample = maxSample;
     float luminance = dot(tonemappedSample.rgb, float3(0.2126, 0.7152, 0.0722));
 
-	float4 finalcolor = lerp(summedSamples, float4(tonemappedSample.rgb, maxSample.a), smoothstep(UI_TONEMAP_GAIN_THRESHOLD - UI_TONEMAP_GAIN_THRESHOLD_SMOOTH, UI_TONEMAP_GAIN_THRESHOLD, luminance) * luminance * UI_TONEMAP_GAIN_SCALE);
+	float4 finalcolor = lerp(summedSamples, float4(tonemappedSample.rgb, maxSample.a), smoothstep(UI_TONEMAP_GAIN_THRESHOLD - UI_TONEMAP_GAIN_THRESHOLD_SMOOTH, UI_TONEMAP_GAIN_THRESHOLD, luminance) * ((luminance * luminance) * UI_TONEMAP_GAIN_SCALE));
 	finalcolor = clamp(finalcolor, 0.0, 1.0);
     return finalcolor;
 }
