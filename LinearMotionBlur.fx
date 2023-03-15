@@ -80,7 +80,7 @@ uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_tooltip = 
 	"Smoothness value for the thresholding.";
     ui_category = "Motion Blur";
-> = 0.20;
+> = 0.50;
 
 uniform float UI_GAIN_SATURATION <
     ui_label = "HDR Gain Saturation";
@@ -149,7 +149,7 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 	float luminance = dot(tonemappedSample.rgb, float3(0.2126, 0.7152, 0.0722));
 
 	// Apply non-linear scaling to gain based on luminance
-	float gain = pow(smoothstep(0.0, 1.0, luminance), 2.2) * (luminance * UI_GAIN_SCALE);
+	float gain = pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, 1.0, luminance), 2.2) * (luminance * UI_GAIN_SCALE);
 	//float gain = (luminance * luminance) * UI_GAIN_SCALE;
 	//float gain = luminance * UI_GAIN_SCALE;
 	gain = clamp(gain, 0.0, 1.0);
