@@ -51,7 +51,7 @@ uniform int  UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
 uniform float UI_GAIN_LUMINANCE <
     ui_label = "HDR Gain Logarithm";
     ui_min = 0.01;
-    ui_max = 4.0;
+    ui_max = 20.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
@@ -74,7 +74,7 @@ uniform float UI_GAIN_SCALE <
 uniform float UI_GAIN_POWER <
     ui_label = "HDR Gain Power";
     ui_min = 0.1;
-    ui_max = 4.0;
+    ui_max = 20.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
