@@ -48,28 +48,39 @@ uniform int  UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
 	ui_category = "Motion Blur";
 > = 48;
 
+uniform float UI_GAIN_LUMINANCE <
+    ui_label = "HDR Gain Logarithm";
+    ui_min = 0.01;
+    ui_max = 4.0;
+    ui_step = 0.01;
+	ui_type = "slider";
+    ui_tooltip = 
+	"Scale of the luminance for preperation to HDR gain.";
+    ui_category = "HDR Simulation";
+> = 1.25;
+
 uniform float UI_GAIN_SCALE <
     ui_label = "HDR Gain Scale";
     ui_min = 0.0;
-    ui_max = 5.0;
+    ui_max = 100.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Scale the contribution of HDR gain to blurred pixels.\n"
 	"\n0.0 is basically LDR, while 2.0 is heavily boosted highlights.";
-    ui_category = "Motion Blur";
-> = 2.00;
+    ui_category = "HDR Simulation";
+> = 10.0;
 
 uniform float UI_GAIN_POWER <
     ui_label = "HDR Gain Power";
     ui_min = 0.1;
-    ui_max = 5.0;
+    ui_max = 4.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Power used to shift the curve of the gain more towards the highlights";
-    ui_category = "Motion Blur";
-> = 5.00;
+    ui_category = "HDR Simulation";
+> = 1.00;
 
 uniform float UI_GAIN_THRESHOLD <
     ui_label = "HDR Gain Threshold";
@@ -79,8 +90,8 @@ uniform float UI_GAIN_THRESHOLD <
 	ui_type = "slider";
     ui_tooltip = 
 	"Threshold value for the HDR gain. Pixels with luminance above this value will be boosted.";
-    ui_category = "Motion Blur";
-> = 0.50;
+    ui_category = "HDR Simulation";
+> = 0.7;
 
 uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_label = "HDR Gain Smoothness";
@@ -90,8 +101,8 @@ uniform float UI_GAIN_THRESHOLD_SMOOTH <
 	ui_type = "slider";
     ui_tooltip = 
 	"Smoothness value for the thresholding.";
-    ui_category = "Motion Blur";
-> = 0.00;
+    ui_category = "HDR Simulation";
+> = 0.30;
 
 uniform float UI_GAIN_SATURATION <
     ui_label = "HDR Gain Saturation";
@@ -101,7 +112,7 @@ uniform float UI_GAIN_SATURATION <
 	ui_type = "slider";
     ui_tooltip = 
 	"Defines how much saturation we are preserving on gain.";
-    ui_category = "Motion Blur";
+    ui_category = "HDR Simulation";
 > = 1.0;
 
 uniform bool UI_HQ_SAMPLING <
@@ -139,7 +150,7 @@ float3 HSVtoRGB(float3 hsv)
 
 // Passes
 float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_Target
-{	 
+{	  
     float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
     float2 velocityTimed = velocity / frametime;
     float2 blurDist = velocityTimed * 50 * UI_BLUR_LENGTH;
@@ -159,9 +170,12 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
     float4 tonemappedSample = maxSample; 
     float luminance = dot(tonemappedSample.rgb, float3(0.2126, 0.7152, 0.0722));
 
-    // Apply non-linear scaling to gain based on luminance
-    float gain = pow(luminance, UI_GAIN_POWER) * UI_GAIN_SCALE;
-    gain = clamp(gain, 0.0, 1.0);
+	// Scale luminance logarithmically to give more control over the gain function
+	float ScaledLumiance = (log(luminance + 1.0) / log(2.0 * UI_GAIN_LUMINANCE + 1.0));
+
+	// Apply non-linear scaling to gain based on logarithmically-scaled luminance
+	float gain = pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, UI_GAIN_THRESHOLD, ScaledLumiance), UI_GAIN_POWER) * ((1.0 - ScaledLumiance) * UI_GAIN_SCALE);
+	gain = saturate(gain);
 
     // Apply gain to pixel values and scale down to avoid clipping
     float4 finalcolor = summedSamples * (1.0 - gain) + tonemappedSample * gain;
@@ -174,7 +188,7 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
     float sat = hsv.y;
 
     float maxDiff = max(max(abs(finalcolor.r - tonemappedSample.r), abs(finalcolor.g - tonemappedSample.g)), abs(finalcolor.b - tonemappedSample.b));
-    float gainFactor = smoothstep(0.0, 1.0, maxDiff);
+    float gainFactor = smoothstep(0.1, 1.0, maxDiff);
 
     if (gainFactor > 0.0) {
         hsv.y = lerp(sat, sat * UI_GAIN_SATURATION, gainFactor);
