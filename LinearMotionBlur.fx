@@ -39,7 +39,7 @@ uniform float  UI_BLUR_LENGTH < __UNIFORM_SLIDER_FLOAT1
 	ui_tooltip = "";
 	ui_label = "Blur Length";
 	ui_category = "Motion Blur";
-> = 0.32;
+> = 0.40;
 
 uniform int  UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
 	ui_min = 3; ui_max = 64; ui_step = 1;
@@ -51,13 +51,13 @@ uniform int  UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
 uniform float UI_GAIN_LUMINANCE <
     ui_label = "HDR Gain Logarithm";
     ui_min = 0.01;
-    ui_max = 20.0;
+    ui_max = 1000.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Scale of the luminance for preperation to HDR gain.";
     ui_category = "HDR Simulation";
-> = 15.00;
+> = 1000.00;
 
 uniform float UI_GAIN_SCALE <
     ui_label = "HDR Gain Scale";
@@ -69,7 +69,7 @@ uniform float UI_GAIN_SCALE <
 	"Scale the contribution of HDR gain to blurred pixels.\n"
 	"\n0.0 is basically LDR, while 2.0 is heavily boosted highlights.";
     ui_category = "HDR Simulation";
-> = 20.0;
+> = 25.0;
 
 uniform float UI_GAIN_POWER <
     ui_label = "HDR Gain Power";
@@ -80,7 +80,7 @@ uniform float UI_GAIN_POWER <
     ui_tooltip = 
 	"Power used to shift the curve of the gain more towards the highlights";
     ui_category = "HDR Simulation";
-> = 2.50;
+> = 1.00;
 
 uniform float UI_GAIN_THRESHOLD <
     ui_label = "HDR Gain Threshold";
@@ -91,7 +91,7 @@ uniform float UI_GAIN_THRESHOLD <
     ui_tooltip = 
 	"Threshold value for the HDR gain. Pixels with luminance above this value will be boosted.";
     ui_category = "HDR Simulation";
-> = 0.5;
+> = 0.75;
 
 uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_label = "HDR Gain Smoothness";
@@ -102,7 +102,7 @@ uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_tooltip = 
 	"Smoothness value for the thresholding.";
     ui_category = "HDR Simulation";
-> = 0.50;
+> = 0.73;
 
 uniform float UI_GAIN_SATURATION <
     ui_label = "HDR Gain Saturation";
