@@ -51,36 +51,36 @@ uniform int  UI_BLUR_SAMPLES_MAX < __UNIFORM_SLIDER_INT1
 uniform float UI_GAIN_LUMINANCE <
     ui_label = "HDR Gain Logarithm";
     ui_min = 0.01;
-    ui_max = 1000.0;
+    ui_max = 10.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Scale of the luminance for preperation to HDR gain.";
     ui_category = "HDR Simulation";
-> = 1000.00;
+> = 2.00;
 
 uniform float UI_GAIN_SCALE <
     ui_label = "HDR Gain Scale";
     ui_min = 0.0;
-    ui_max = 100.0;
+    ui_max = 10.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Scale the contribution of HDR gain to blurred pixels.\n"
 	"\n0.0 is basically LDR, while 2.0 is heavily boosted highlights.";
     ui_category = "HDR Simulation";
-> = 25.0;
+> = 2.0;
 
 uniform float UI_GAIN_POWER <
     ui_label = "HDR Gain Power";
     ui_min = 0.1;
-    ui_max = 20.0;
+    ui_max = 10.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Power used to shift the curve of the gain more towards the highlights";
     ui_category = "HDR Simulation";
-> = 1.00;
+> = 2.00;
 
 uniform float UI_GAIN_THRESHOLD <
     ui_label = "HDR Gain Threshold";
@@ -91,7 +91,7 @@ uniform float UI_GAIN_THRESHOLD <
     ui_tooltip = 
 	"Threshold value for the HDR gain. Pixels with luminance above this value will be boosted.";
     ui_category = "HDR Simulation";
-> = 0.75;
+> = 0.50;
 
 uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_label = "HDR Gain Smoothness";
@@ -102,18 +102,18 @@ uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_tooltip = 
 	"Smoothness value for the thresholding.";
     ui_category = "HDR Simulation";
-> = 0.73;
+> = 0.50;
 
 uniform float UI_GAIN_SATURATION <
     ui_label = "HDR Gain Saturation";
     ui_min = 0.0;
-    ui_max = 4.0;
+    ui_max = 5.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"Defines how much saturation we are preserving on gain.";
     ui_category = "HDR Simulation";
-> = 1.0;
+> = 1.5;
 
 uniform bool UI_HQ_SAMPLING <
 	ui_label = "High Quality Resampling";	
@@ -128,74 +128,51 @@ texture texMotionVectors          { Width = BUFFER_WIDTH;   Height = BUFFER_HEIG
 sampler SamplerMotionVectors2 { Texture = texMotionVectors; AddressU = Clamp; AddressV = Clamp; MipFilter = Point; MinFilter = Point; MagFilter = Point; };
 
 // Passes
-
-// Helper function to convert RGB to HSV and vice versa
-float3 RGBtoHSV(float3 rgb)
-{
-    float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-    float4 p = lerp(float4(rgb.bg, K.wz), float4(rgb.gb, K.xy), step(rgb.b, rgb.g));
-    float4 q = lerp(float4(p.xyw, rgb.r), float4(rgb.r, p.yzx), step(p.x, rgb.r));
-
-    float d = q.x - min(q.w, q.y);
-    float e = 1.0e-10;
-    return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
-}
-
-float3 HSVtoRGB(float3 hsv)
-{
-    float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    float3 p = abs(frac(hsv.xxx + K.xyz) * 6.0 - K.www);
-    return hsv.z * lerp(K.xxx, clamp(p - K.xxx, 0.0, 1.0), hsv.y);
-}
-
-// Passes
 float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_Target
 {	  
-    float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
-    float2 velocityTimed = velocity / frametime;
-    float2 blurDist = velocityTimed * 50 * UI_BLUR_LENGTH;
-    float2 sampleDist = blurDist / UI_BLUR_SAMPLES_MAX;
-    int halfSamples = UI_BLUR_SAMPLES_MAX / 2;
+	float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
+	float2 velocityTimed = velocity / frametime;
+	float2 blurDist = velocityTimed * 50 * UI_BLUR_LENGTH;
+	float2 sampleDist = blurDist / UI_BLUR_SAMPLES_MAX;
+	int halfSamples = UI_BLUR_SAMPLES_MAX / 2;
 
-    float4 summedSamples = 0.0;
-    float4 currentSample = tex2D(samplerColor, texcoord);
-    float4 maxSample = currentSample;
-    for(int s = 0; s < UI_BLUR_SAMPLES_MAX; s++)
-    {
-        float4 sampled = tex2D(samplerColor, texcoord - sampleDist * (s - halfSamples));
-        summedSamples += sampled / UI_BLUR_SAMPLES_MAX;
-        maxSample.rgb = max(maxSample.rgb, sampled.rgb);
-    }
+	float4 summedSamples = 0.0;
+	float4 currentSample = tex2D(samplerColor, texcoord);
+	float4 maxSample = currentSample;
+	for(int s = 0; s < UI_BLUR_SAMPLES_MAX; s++)
+	{
+		float4 sampled = tex2D(samplerColor, texcoord - sampleDist * (s - halfSamples));
+		summedSamples += sampled / UI_BLUR_SAMPLES_MAX;
+		maxSample.rgb = max(maxSample.rgb, sampled.rgb);
+	}
 
-    float4 tonemappedSample = maxSample; 
-    float luminance = dot(tonemappedSample.rgb, float3(0.2126, 0.7152, 0.0722));
+	float4 BlurredSample = maxSample;
+	float luminance = dot(BlurredSample.rgb, float3(0.299, 0.587, 0.114));
+	float ScaledLuminance = (log(luminance + 1.0) / log(2.0 * UI_GAIN_LUMINANCE + 1.0));
 
-	// Scale luminance logarithmically to give more control over the gain function
-	float ScaledLumiance = (log(luminance + 1.0) / log(2.0 * UI_GAIN_LUMINANCE + 1.0));
-
-	// Apply non-linear scaling to gain based on logarithmically-scaled luminance
-	float gain = pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, UI_GAIN_THRESHOLD, ScaledLumiance), UI_GAIN_POWER) * ((1.0 - ScaledLumiance) * UI_GAIN_SCALE);
+	float threshold = UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH * (1.0 - ScaledLuminance);
+	float gain = pow(smoothstep(threshold, UI_GAIN_THRESHOLD, ScaledLuminance), UI_GAIN_POWER) * ((1.0 - ScaledLuminance) * UI_GAIN_SCALE + UI_GAIN_SCALE * UI_GAIN_THRESHOLD_SMOOTH * (1.0 - exp(-2.0 * (ScaledLuminance - threshold))));
 	gain = saturate(gain);
 
-    // Apply gain to pixel values and scale down to avoid clipping
-    float4 finalcolor = summedSamples * (1.0 - gain) + tonemappedSample * gain;
-    float maxVal = max(max(finalcolor.r, finalcolor.g), finalcolor.b);
-    if (maxVal > 1.0) {
-        finalcolor /= maxVal;
-    }
+	float4 finalcolor = summedSamples * (1.0 - gain) + BlurredSample * gain;
+		
+	float maxVal = max(max(finalcolor.r, finalcolor.g), finalcolor.b);
+	float scale = 1.0 / max(maxVal, 1.0);
 
-    float3 hsv = RGBtoHSV(finalcolor.rgb);
-    float sat = hsv.y;
+	finalcolor *= scale;
 
-    float maxDiff = max(max(abs(finalcolor.r - tonemappedSample.r), abs(finalcolor.g - tonemappedSample.g)), abs(finalcolor.b - tonemappedSample.b));
-    float gainFactor = smoothstep(0.1, 1.0, maxDiff);
+	float maxDiff = max(max(abs(finalcolor.r - BlurredSample.r), abs(finalcolor.g - BlurredSample.g)), abs(finalcolor.b - BlurredSample.b));
+	float gainFactor = smoothstep(0.25, 1.0, maxDiff);
 
-    if (gainFactor > 0.0) {
-        hsv.y = lerp(sat, sat * UI_GAIN_SATURATION, gainFactor);
-        finalcolor.rgb = HSVtoRGB(hsv);
-    }
+	if (gainFactor > 0.0) {
+		float3 lumCoeff = float3(0.299, 0.587, 0.114);
+		float luma = dot(maxSample.rgb, lumCoeff);
+		float3 gray = float3(luma, luma, luma);
+		float3 color = lerp(gray, maxSample.rgb, UI_GAIN_SATURATION);
+		finalcolor.rgb = lerp(finalcolor.rgb, color, gainFactor);
+	}
 
-    return clamp(finalcolor, 0.0, 1.0);
+	return clamp(finalcolor, 0.0, 1.0);
 }
 
 technique LinearMotionBlur
