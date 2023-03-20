@@ -74,14 +74,25 @@ uniform float UI_GAIN_POWER <
 uniform float UI_GAIN_REJECT <
     ui_label = "HDR Gain Reject";
     ui_min = 0.0;
-    ui_max = 2.5;
+    ui_max = 3.0;
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
 	"This is used for rejecting neighbouring pixels if they are too bright,\n"
-	"\nto avoid flickering in overly bright scens";
+	"\nto avoid flickering in overly bright scens. 0.0 disables it.";
     ui_category = "HDR Simulation";
-> = 1.90;
+> = 2.35;
+
+uniform float UI_GAIN_REJECT_RANGE <
+    ui_label = "HDR Gain Reject Range";
+    ui_min = 0.5;
+    ui_max = 10;
+    ui_step = 0.01;
+	ui_type = "slider";
+    ui_tooltip = 
+	"Distance for sampling neighbour pixels for rejecting if too bright";
+    ui_category = "HDR Simulation";
+> = 4.0;
 
 uniform float UI_GAIN_THRESHOLD <
     ui_label = "HDR Gain Threshold";
@@ -92,7 +103,7 @@ uniform float UI_GAIN_THRESHOLD <
     ui_tooltip = 
 	"Threshold value for the HDR gain. Pixels with luminance above this value will be boosted.";
     ui_category = "HDR Simulation";
-> = 0.60;
+> = 1.00;
 
 uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_label = "HDR Gain Smoothness";
@@ -101,9 +112,9 @@ uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_step = 0.01;
 	ui_type = "slider";
     ui_tooltip = 
-	"Smoothness value for the thresholding.";
+	"Smoothness value for the thresholding. 0.0 is no smoothness, 1.0 is max.";
     ui_category = "HDR Simulation";
-> = 0.60;
+> = 1.00;
 
 uniform float UI_GAIN_SATURATION <
     ui_label = "HDR Gain Saturation";
@@ -157,7 +168,7 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 	float reject = 1.0;
 	if (UI_GAIN_REJECT > 0.0)
 	{
-		float2 texCoordOffset = sampleDist * (UI_BLUR_SAMPLES_MAX / 2);
+		float2 texCoordOffset = sampleDist * (UI_BLUR_SAMPLES_MAX * UI_GAIN_REJECT_RANGE);
 		float2 neighborOffsets[9] = {
 			float2(-1.0, -1.0), float2(0.0, -1.0), float2(1.0, -1.0),
 			float2(-1.0, 0.0), float2(0.0, 0.0), float2(1.0, 0.0),
@@ -170,7 +181,7 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 			float2 neighborTexCoord = texcoord - texCoordOffset.xy + neighborOffsets[i] * texCoordOffset;
 			float neighborLum = dot(tex2D(samplerColor, neighborTexCoord).rgb, float3(0.299, 0.587, 0.114));
 			float lumDiff = luminance - neighborLum;
-			float weight = exp(-(length(neighborOffsets[i]) / (UI_BLUR_SAMPLES_MAX / 2)));
+			float weight = exp(-(length(neighborOffsets[i]) / (UI_BLUR_SAMPLES_MAX * UI_GAIN_REJECT_RANGE)));
 			neighborLuminance += lumDiff * weight;
 			totalWeight += weight;
 		}
