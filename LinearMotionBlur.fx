@@ -24,14 +24,25 @@ Notices:
  */
 
 
-//  Includes
+// Includes
 #include "ReShadeUI.fxh"
 #include "ReShade.fxh"
 
+// Defines
 
-//  Defines
+#ifndef SRGB_INPUT_COLOR
+#define SRGB_INPUT_COLOR 1
+#endif
+
+#ifndef SRGB_OUTPUT_COLOR
+#define SRGB_OUTPUT_COLOR 1
+#endif
+
+#define SATURATION_THRESHOLD 0.25
+
+const static float3 lumCoeff = float3(0.299, 0.587, 0.114);
+
 uniform float frametime < source = "frametime"; >;
-
 
 // UI
 uniform float  UI_BLUR_LENGTH < __UNIFORM_SLIDER_FLOAT1
@@ -127,18 +138,27 @@ uniform float UI_GAIN_SATURATION <
     ui_category = "HDR Simulation";
 > = 1.00;
 
-uniform bool UI_HQ_SAMPLING <
-	ui_label = "High Quality Resampling";	
-	ui_category = "Motion Blur";
-> = false;
+							 
+									   
+							 
+		  
 
-#define SATURATION_THRESHOLD 0.25
+								 
 
-const static float3 lumCoeff = float3(0.299, 0.587, 0.114);
+														   
 
 //  Textures & Samplers
-texture2D texColor : COLOR;
-sampler samplerColor { Texture = texColor; AddressU = Clamp; AddressV = Clamp; MipFilter = Linear; MinFilter = Linear; MagFilter = Linear; };
+texture texColor : COLOR;
+sampler samplerColor 
+{ 
+	Texture = texColor;
+	
+	#if SRGB_INPUT_COLOR
+		SRGBTexture = true;
+	#endif
+	
+	AddressU = Clamp; AddressV = Clamp; MipFilter = Linear; MinFilter = Linear; MagFilter = Linear; 
+};
 
 texture texMotionVectors          { Width = BUFFER_WIDTH;   Height = BUFFER_HEIGHT;   Format = RG16F; };
 sampler SamplerMotionVectors2 { Texture = texMotionVectors; AddressU = Clamp; AddressV = Clamp; MipFilter = Point; MinFilter = Point; MagFilter = Point; };
@@ -222,5 +242,9 @@ technique LinearMotionBlur
     {
         VertexShader = PostProcessVS;
         PixelShader = BlurPS;
+        
+		#if SRGB_OUTPUT_COLOR
+			SRGBWriteEnable = true;
+		#endif
     }
 }
