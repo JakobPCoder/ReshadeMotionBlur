@@ -183,14 +183,18 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 	float4 finalcolor = summedSamples;
 	
 	float gain = 0.0;
+	
+	// Calculate the maximum input value
+	float maxInputValue = max(max(summedSamples.r, max(summedSamples.g, summedSamples.b)), 1e-5);  // Added epsilon to avoid division by zero
+	
 	// Gain Function
 	if (HDR_DISPLAY_OUTPUT)
-		gain = pow(smoothstep((UI_GAIN_THRESHOLD) - (UI_GAIN_THRESHOLD_SMOOTH), (UI_GAIN_THRESHOLD * 100), luminance), UI_GAIN_POWER) * (smoothstep(-(UI_GAIN_THRESHOLD_SMOOTH * 100), 1.0, luminance) * UI_GAIN_SCALE);	
+		gain = abs(pow(smoothstep((UI_GAIN_THRESHOLD) - (UI_GAIN_THRESHOLD_SMOOTH * 100), (UI_GAIN_THRESHOLD * 100), luminance), UI_GAIN_POWER) * (smoothstep(-(UI_GAIN_THRESHOLD_SMOOTH* 100), 1.0, luminance) * UI_GAIN_SCALE / maxInputValue));   	
 	else
 		gain = pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, UI_GAIN_THRESHOLD, luminance), UI_GAIN_POWER) * (smoothstep(-UI_GAIN_THRESHOLD_SMOOTH, 1.0, luminance) * UI_GAIN_SCALE);
 	// Rejection Function 
 	float reject = 1.0;
-	if (UI_GAIN_REJECT > 0.0)
+	if (UI_GAIN_REJECT > 0.01)
 	{
 		float2 texCoordOffset = sampleDist * (UI_BLUR_SAMPLES_MAX * UI_GAIN_REJECT_RANGE);
 		float neighborLuminance = 0.0;
@@ -204,7 +208,7 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 				neighborLum = dot(tex2D(samplerColor, neighborTexCoord).rgb, lumCoeffLinear);
 			else
 				neighborLum = dot(tex2D(samplerColor, neighborTexCoord).rgb, lumCoeffGamma);
-            		float luminanceDiff = neighborLum - luminance;
+            float luminanceDiff = neighborLum - luminance;
 			float distanceWeight = exp(-(length(normalize(sampleDist * (i - halfSamples))) + luminanceDiff) / (UI_BLUR_SAMPLES_MAX * UI_GAIN_REJECT_RANGE));
 			neighborLuminance += neighborLum * distanceWeight;
 			totalWeight += distanceWeight;
@@ -222,17 +226,17 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 
 	gain = saturate(gain * reject);
 	
-	if (HDR_DISPLAY_OUTPUT)
-		finalcolor *= 1.0 / max(dot(summedSamples.rgb, lumCoeffLinear), 1.0);
-	else
-		finalcolor *= 1.0 / max(dot(summedSamples.rgb, lumCoeffGamma), 1.0);
-		
 	finalcolor = summedSamples * (1.0 - gain) + color * gain;
-	
-	if (HDR_DISPLAY_OUTPUT)		 	
-		return finalcolor;
+
+	if (HDR_DISPLAY_OUTPUT)
+	{
+	    return finalcolor;
+	}
 	else 
+	{
+		finalcolor *= 1.0 / max(dot(summedSamples.rgb, lumCoeffGamma), 1.0);
 		return clamp(finalcolor, 0.0, 1.0);
+	}
 }
 
 technique LinearMotionBlur
