@@ -184,12 +184,9 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 	
 	float gain = 0.0;
 	
-	// Calculate the maximum input value
-	float maxInputValue = max(max(summedSamples.r, max(summedSamples.g, summedSamples.b)), 1e-5);  // Added epsilon to avoid division by zero
-	
 	// Gain Function
 	if (HDR_DISPLAY_OUTPUT)
-		gain = abs(pow(smoothstep((UI_GAIN_THRESHOLD) - (UI_GAIN_THRESHOLD_SMOOTH * 100), (UI_GAIN_THRESHOLD * 100), luminance), UI_GAIN_POWER) * (smoothstep(-(UI_GAIN_THRESHOLD_SMOOTH* 100), 1.0, luminance) * UI_GAIN_SCALE / maxInputValue));   	
+		gain = abs(pow(smoothstep((UI_GAIN_THRESHOLD) - (UI_GAIN_THRESHOLD_SMOOTH), (UI_GAIN_THRESHOLD * 100), luminance), UI_GAIN_POWER) * (smoothstep(-(UI_GAIN_THRESHOLD_SMOOTH), 1.0, luminance) * UI_GAIN_SCALE));   	
 	else
 		gain = pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, UI_GAIN_THRESHOLD, luminance), UI_GAIN_POWER) * (smoothstep(-UI_GAIN_THRESHOLD_SMOOTH, 1.0, luminance) * UI_GAIN_SCALE);
 	// Rejection Function 
@@ -223,8 +220,16 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 		float rejectThreshold = smoothstep(0.0, gain, avgLuminanceRatio);
 		reject = 1.0 - smoothstep(0.0, gain, rejectThreshold * UI_GAIN_REJECT);
 	}
-
-	gain = saturate(gain * reject);
+	
+	if (UI_GAIN_REJECT > 0.01)
+	{
+		if (HDR_DISPLAY_OUTPUT)
+		{
+			gain = gain * reject;
+		}
+		else 
+			gain = saturate(gain * reject);
+	}
 	
 	finalcolor = summedSamples * (1.0 - gain) + color * gain;
 
