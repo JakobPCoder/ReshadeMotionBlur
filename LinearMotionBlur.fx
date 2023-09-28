@@ -50,12 +50,11 @@ uniform float frametime < source = "frametime"; >;
 uniform bool HDR_DISPLAY_OUTPUT
 <
 	ui_category = "Motion Blur";
-	//ui_category_closed = false;
 	ui_label = "Real HDR input and display?";
 	ui_tooltip =
 		"If real HDR display and input is used, output clamping is turned off\n"
 		"\nIt's also probably worth setting all gain and thresholding to zero, but depending on the setup it may still be required";
-> = false;
+> = true;
 
 uniform float  UI_BLUR_LENGTH < __UNIFORM_SLIDER_FLOAT1
 	ui_min = 0.1; ui_max = 0.5; ui_step = 0.01;
@@ -81,7 +80,7 @@ uniform float UI_GAIN_SCALE <
 	"Scale the contribution of gain to blurred pixels.\n"
 	"\n0.0 is basically no gain, while 2.0 is heavily boosted highlights.";
     ui_category = "HDR Simulation";
-> = 1.50;
+> = 1.00;
 
 uniform float UI_GAIN_POWER <
     ui_label = "HDR Gain Power";
@@ -104,7 +103,7 @@ uniform float UI_GAIN_REJECT <
 	"This is used for rejecting neighbouring pixels if they are too bright,\n"
 	"\nto avoid flickering in overly bright scens. 0.0 disables this function completely.";
     ui_category = "HDR Simulation";
-> = 3.50;
+> = 0.00;
 
 uniform float UI_GAIN_REJECT_RANGE <
     ui_label = "HDR Gain Reject Range";
@@ -117,6 +116,18 @@ uniform float UI_GAIN_REJECT_RANGE <
     ui_category = "HDR Simulation";
 > = 3.50;
 
+uniform int UI_GAIN_THRESHOLD_METHOD <
+	ui_type = "combo";
+    ui_label = "HDR Gain Threshold method";
+    ui_items = "SmoothStep\0Luminance with SmoothStep\0";
+    ui_tooltip = 
+	"SmoothStep is more natural looking but gain have to be more artifically raised.\n"
+	"Luminance with SmoothStep is better for preserving highlights";
+	ui_min = 0; 
+    ui_max = 1;
+    ui_category = "HDR Simulation";
+> = 1;
+
 uniform float UI_GAIN_THRESHOLD <
     ui_label = "HDR Gain Threshold";
     ui_min = 0.0;
@@ -126,7 +137,7 @@ uniform float UI_GAIN_THRESHOLD <
     ui_tooltip = 
 	"Pixels with luminance above this value will be boosted.";
     ui_category = "HDR Simulation";
-> = 1.00;
+> = 0.50;
 
 uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_label = "HDR Gain Smoothness";
@@ -137,7 +148,7 @@ uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_tooltip = 
 	"Thresholding that smoothly interpolates between max and min value of luminance.";
     ui_category = "HDR Simulation";
-> = 5.00;
+> = 0.25;
 
 //  Textures & Samplers
 texture texColor : COLOR;
@@ -174,21 +185,37 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 	}
 	
 	float luminance = 0.0;
-	
-	if (HDR_DISPLAY_OUTPUT)
-		luminance = dot(color.rgb, lumCoeffLinear);
-	else
-		luminance = dot(color.rgb, lumCoeffGamma);
+		[branch]
+		if (HDR_DISPLAY_OUTPUT)
+			luminance = dot(color.rgb, lumCoeffLinear);
+		else
+			luminance = dot(color.rgb, lumCoeffGamma);
 	
 	float4 finalcolor = summedSamples;
 	
 	float gain = 0.0;
 	
 	// Gain Function
-	if (HDR_DISPLAY_OUTPUT)
-		gain = abs(pow(smoothstep((UI_GAIN_THRESHOLD) - (UI_GAIN_THRESHOLD_SMOOTH), (UI_GAIN_THRESHOLD * 100), luminance), UI_GAIN_POWER) * (smoothstep(-(UI_GAIN_THRESHOLD_SMOOTH), 1.0, luminance) * UI_GAIN_SCALE));   	
-	else
+	[branch]
+	if (HDR_DISPLAY_OUTPUT) {
+		[branch]
+		if (UI_GAIN_THRESHOLD_METHOD > 0) {
+		gain = (luminance > (UI_GAIN_THRESHOLD * 10) )
+			? UI_GAIN_SCALE
+			: gain = smoothstep((UI_GAIN_SCALE/2), UI_GAIN_SCALE, luminance) * UI_GAIN_THRESHOLD_SMOOTH;
+		} else {
+		gain = abs(pow(smoothstep((UI_GAIN_THRESHOLD) - (UI_GAIN_THRESHOLD_SMOOTH), (UI_GAIN_THRESHOLD * 100), luminance), UI_GAIN_POWER) * (smoothstep(-(UI_GAIN_THRESHOLD_SMOOTH), 1.0, luminance) * UI_GAIN_SCALE));
+		}
+	} else {
+		[branch]
+		if (UI_GAIN_THRESHOLD_METHOD > 0) {
+		gain = (luminance > UI_GAIN_THRESHOLD)
+			? UI_GAIN_SCALE
+			: gain = smoothstep((UI_GAIN_SCALE/2), UI_GAIN_SCALE, luminance) * UI_GAIN_THRESHOLD_SMOOTH;
+		} else {
 		gain = pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, UI_GAIN_THRESHOLD, luminance), UI_GAIN_POWER) * (smoothstep(-UI_GAIN_THRESHOLD_SMOOTH, 1.0, luminance) * UI_GAIN_SCALE);
+		}  
+	}
 	// Rejection Function 
 	float reject = 1.0;
 	if (UI_GAIN_REJECT > 0.01)
@@ -201,14 +228,17 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 		for (int i = 0; i < UI_BLUR_SAMPLES_MAX; i++)
 		{
 			float2 neighborTexCoord = texcoord - sampleDist * (i - halfSamples) * UI_GAIN_REJECT_RANGE;
-			if (HDR_DISPLAY_OUTPUT)
+			[branch]
+			if (HDR_DISPLAY_OUTPUT) {
 				neighborLum = dot(tex2D(samplerColor, neighborTexCoord).rgb, lumCoeffLinear);
-			else
+			} else {
 				neighborLum = dot(tex2D(samplerColor, neighborTexCoord).rgb, lumCoeffGamma);
+			}
             float luminanceDiff = neighborLum - luminance;
 			float distanceWeight = exp(-(length(normalize(sampleDist * (i - halfSamples))) + luminanceDiff) / (UI_BLUR_SAMPLES_MAX * UI_GAIN_REJECT_RANGE));
 			neighborLuminance += neighborLum * distanceWeight;
 			totalWeight += distanceWeight;
+			[branch]
 			if (neighborLum > luminance) {
 				luminanceRatio += luminance / neighborLum;
 			} else {
@@ -221,24 +251,26 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 		reject = 1.0 - smoothstep(0.0, gain, rejectThreshold * UI_GAIN_REJECT);
 	}
 	
-	if (UI_GAIN_REJECT > 0.01)
-	{
-		if (HDR_DISPLAY_OUTPUT)
-		{
+	if (UI_GAIN_REJECT > 0.01) {
+		[branch]
+		if (HDR_DISPLAY_OUTPUT) {
 			gain = gain * reject;
-		}
-		else 
+		} else {
 			gain = saturate(gain * reject);
+		}
 	}
 	
-	finalcolor = summedSamples * (1.0 - gain) + color * gain;
-
-	if (HDR_DISPLAY_OUTPUT)
-	{
-	    return finalcolor;
+	[branch]
+	if (UI_GAIN_SCALE > 0.01) {
+		finalcolor = summedSamples * (1.0 - gain) + color * gain;
+	} else {
+		finalcolor = summedSamples;
 	}
-	else 
-	{
+			
+	[branch]
+	if (HDR_DISPLAY_OUTPUT) {
+		    return finalcolor;
+	} else {
 		finalcolor *= 1.0 / max(dot(summedSamples.rgb, lumCoeffGamma), 1.0);
 		return clamp(finalcolor, 0.0, 1.0);
 	}
