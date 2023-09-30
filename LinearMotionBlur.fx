@@ -78,7 +78,7 @@ uniform float UI_GAIN_SCALE <
 	ui_type = "slider";
     ui_tooltip = 
 	"Scale the contribution of gain to blurred pixels.\n"
-	"\n0.0 is basically no gain, while 2.0 is heavily boosted highlights.";
+	"\n0.0 is basically no gain, while 2.0 is heavily boosted highlights. Set to 1.0 in true HDR for neutral look.";
     ui_category = "HDR Simulation";
 > = 1.00;
 
@@ -126,7 +126,7 @@ uniform int UI_GAIN_THRESHOLD_METHOD <
 	ui_min = 0; 
     ui_max = 1;
     ui_category = "HDR Simulation";
-> = 1;
+> = 0;
 
 uniform float UI_GAIN_THRESHOLD <
     ui_label = "HDR Gain Threshold";
@@ -137,7 +137,7 @@ uniform float UI_GAIN_THRESHOLD <
     ui_tooltip = 
 	"Pixels with luminance above this value will be boosted.";
     ui_category = "HDR Simulation";
-> = 0.50;
+> = 1.00;
 
 uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_label = "HDR Gain Smoothness";
@@ -148,7 +148,7 @@ uniform float UI_GAIN_THRESHOLD_SMOOTH <
     ui_tooltip = 
 	"Thresholding that smoothly interpolates between max and min value of luminance.";
     ui_category = "HDR Simulation";
-> = 0.25;
+> = 1.00;
 
 //  Textures & Samplers
 texture texColor : COLOR;
@@ -176,10 +176,11 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 	int halfSamples = UI_BLUR_SAMPLES_MAX / 2;
 
 	float4 summedSamples = 0;
+	float4 sampled = 0;
 	float4 color = tex2D(samplerColor, texcoord);
 	for(int s = 0; s < UI_BLUR_SAMPLES_MAX; s++)
 	{
-		float4 sampled = tex2D(samplerColor, texcoord - sampleDist * (s - halfSamples));
+		sampled = tex2D(samplerColor, texcoord - sampleDist * (s - halfSamples));
 		summedSamples += sampled / UI_BLUR_SAMPLES_MAX;
 		color.rgb = max(color.rgb, sampled.rgb);
 	}
@@ -200,18 +201,18 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 	if (HDR_DISPLAY_OUTPUT) {
 		[branch]
 		if (UI_GAIN_THRESHOLD_METHOD > 0) {
-		gain = (luminance > (UI_GAIN_THRESHOLD * 10) )
+		gain = (luminance > (UI_GAIN_THRESHOLD * 10))
 			? UI_GAIN_SCALE
-			: gain = smoothstep((UI_GAIN_SCALE/2), UI_GAIN_SCALE, luminance) * UI_GAIN_THRESHOLD_SMOOTH;
+			: gain = smoothstep((0.0), luminance, UI_GAIN_SCALE * UI_GAIN_THRESHOLD_SMOOTH);
 		} else {
-		gain = abs(pow(smoothstep((UI_GAIN_THRESHOLD) - (UI_GAIN_THRESHOLD_SMOOTH), (UI_GAIN_THRESHOLD * 100), luminance), UI_GAIN_POWER) * (smoothstep(-(UI_GAIN_THRESHOLD_SMOOTH), 1.0, luminance) * UI_GAIN_SCALE));
+		gain = abs(pow(smoothstep((UI_GAIN_THRESHOLD) - (UI_GAIN_THRESHOLD_SMOOTH), (UI_GAIN_THRESHOLD * 10), luminance), UI_GAIN_POWER) * (smoothstep(-(UI_GAIN_THRESHOLD_SMOOTH), 1.0, luminance) * UI_GAIN_SCALE));
 		}
 	} else {
 		[branch]
 		if (UI_GAIN_THRESHOLD_METHOD > 0) {
 		gain = (luminance > UI_GAIN_THRESHOLD)
 			? UI_GAIN_SCALE
-			: gain = smoothstep((UI_GAIN_SCALE/2), UI_GAIN_SCALE, luminance) * UI_GAIN_THRESHOLD_SMOOTH;
+			: gain = smoothstep((0.0), luminance, UI_GAIN_SCALE * UI_GAIN_THRESHOLD_SMOOTH);
 		} else {
 		gain = pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, UI_GAIN_THRESHOLD, luminance), UI_GAIN_POWER) * (smoothstep(-UI_GAIN_THRESHOLD_SMOOTH, 1.0, luminance) * UI_GAIN_SCALE);
 		}  
@@ -269,7 +270,7 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 			
 	[branch]
 	if (HDR_DISPLAY_OUTPUT) {
-		    return finalcolor;
+		return finalcolor;
 	} else {
 		finalcolor *= 1.0 / max(dot(summedSamples.rgb, lumCoeffGamma), 1.0);
 		return clamp(finalcolor, 0.0, 1.0);
