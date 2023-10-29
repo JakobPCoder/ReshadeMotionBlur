@@ -40,6 +40,9 @@ Notices:
 
 #define SATURATION_THRESHOLD 0.25
 
+#define VELOCITY_SCALE 50.0
+#define HALF_SAMPLES (UI_BLUR_SAMPLES_MAX / 2)
+
 const static float3 lumCoeffGamma = float3(0.299, 0.587, 0.114);
 const static float3 lumCoeffLinear = float3(0.2126, 0.7152, 0.0722);
 
@@ -171,26 +174,20 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 {	  
 	float2 velocity = tex2D(SamplerMotionVectors2, texcoord).xy;
 	float2 velocityTimed = velocity / frametime;
-	float2 blurDist = velocityTimed * 50 * UI_BLUR_LENGTH;
+	float2 blurDist = velocityTimed * VELOCITY_SCALE * UI_BLUR_LENGTH;
 	float2 sampleDist = blurDist / UI_BLUR_SAMPLES_MAX;
-	int halfSamples = UI_BLUR_SAMPLES_MAX / 2;
 
 	float4 summedSamples = 0;
 	float4 sampled = 0;
 	float4 color = tex2D(samplerColor, texcoord);
 	for(int s = 0; s < UI_BLUR_SAMPLES_MAX; s++)
 	{
-		sampled = tex2D(samplerColor, texcoord - sampleDist * (s - halfSamples));
+		sampled = tex2D(samplerColor, texcoord - sampleDist * (s - HALF_SAMPLES));
 		summedSamples += sampled / UI_BLUR_SAMPLES_MAX;
 		color.rgb = max(color.rgb, sampled.rgb);
 	}
 	
-	float luminance = 0.0;
-		[branch]
-		if (HDR_DISPLAY_OUTPUT)
-			luminance = dot(color.rgb, lumCoeffLinear);
-		else
-			luminance = dot(color.rgb, lumCoeffGamma);
+	float luminance = dot(summedSamples.rgb, HDR_DISPLAY_OUTPUT ? lumCoeffLinear : lumCoeffGamma);
 	
 	float4 finalcolor = summedSamples;
 	
@@ -199,23 +196,17 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 	// Gain Function
 	[branch]
 	if (HDR_DISPLAY_OUTPUT) {
-		[branch]
-		if (UI_GAIN_THRESHOLD_METHOD > 0) {
-		gain = (luminance > (UI_GAIN_THRESHOLD * 10))
-			? UI_GAIN_SCALE
-			: gain = smoothstep((0.0), luminance, UI_GAIN_SCALE * UI_GAIN_THRESHOLD_SMOOTH);
-		} else {
-		gain = abs(pow(smoothstep((UI_GAIN_THRESHOLD) - (UI_GAIN_THRESHOLD_SMOOTH), (UI_GAIN_THRESHOLD * 10), luminance), UI_GAIN_POWER) * (smoothstep(-(UI_GAIN_THRESHOLD_SMOOTH), 1.0, luminance) * UI_GAIN_SCALE));
-		}
+	    if (UI_GAIN_THRESHOLD_METHOD > 0) {
+	        gain = luminance > UI_GAIN_THRESHOLD * 10 ? UI_GAIN_SCALE : smoothstep(0.0, luminance, UI_GAIN_SCALE * UI_GAIN_THRESHOLD_SMOOTH);
+	    } else {
+	        gain = abs(pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, UI_GAIN_THRESHOLD * 10, luminance), UI_GAIN_POWER) * smoothstep(-UI_GAIN_THRESHOLD_SMOOTH, 1.0, luminance) * UI_GAIN_SCALE);
+	    }
 	} else {
-		[branch]
-		if (UI_GAIN_THRESHOLD_METHOD > 0) {
-		gain = (luminance > UI_GAIN_THRESHOLD)
-			? UI_GAIN_SCALE
-			: gain = smoothstep((0.0), luminance, UI_GAIN_SCALE * UI_GAIN_THRESHOLD_SMOOTH);
-		} else {
-		gain = pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, UI_GAIN_THRESHOLD, luminance), UI_GAIN_POWER) * (smoothstep(-UI_GAIN_THRESHOLD_SMOOTH, 1.0, luminance) * UI_GAIN_SCALE);
-		}  
+	    if (UI_GAIN_THRESHOLD_METHOD > 0) {
+	        gain = luminance > UI_GAIN_THRESHOLD ? UI_GAIN_SCALE : smoothstep(0.0, luminance, UI_GAIN_SCALE * UI_GAIN_THRESHOLD_SMOOTH);
+	    } else {
+	        gain = pow(smoothstep(UI_GAIN_THRESHOLD - UI_GAIN_THRESHOLD_SMOOTH, UI_GAIN_THRESHOLD, luminance), UI_GAIN_POWER) * smoothstep(-UI_GAIN_THRESHOLD_SMOOTH, 1.0, luminance) * UI_GAIN_SCALE;
+	    }
 	}
 	// Rejection Function 
 	float reject = 1.0;
@@ -228,15 +219,10 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 		float neighborLum = 0.0;
 		for (int i = 0; i < UI_BLUR_SAMPLES_MAX; i++)
 		{
-			float2 neighborTexCoord = texcoord - sampleDist * (i - halfSamples) * UI_GAIN_REJECT_RANGE;
-			[branch]
-			if (HDR_DISPLAY_OUTPUT) {
-				neighborLum = dot(tex2D(samplerColor, neighborTexCoord).rgb, lumCoeffLinear);
-			} else {
-				neighborLum = dot(tex2D(samplerColor, neighborTexCoord).rgb, lumCoeffGamma);
-			}
+			float2 neighborTexCoord = texcoord - sampleDist * (i - HALF_SAMPLES) * UI_GAIN_REJECT_RANGE;
+			neighborLum = dot(tex2D(samplerColor, neighborTexCoord).rgb, HDR_DISPLAY_OUTPUT ? lumCoeffLinear : lumCoeffGamma);
             float luminanceDiff = neighborLum - luminance;
-			float distanceWeight = exp(-(length(normalize(sampleDist * (i - halfSamples))) + luminanceDiff) / (UI_BLUR_SAMPLES_MAX * UI_GAIN_REJECT_RANGE));
+			float distanceWeight = exp(-(length(normalize(sampleDist * (i - HALF_SAMPLES))) + luminanceDiff) / (UI_BLUR_SAMPLES_MAX * UI_GAIN_REJECT_RANGE));
 			neighborLuminance += neighborLum * distanceWeight;
 			totalWeight += distanceWeight;
 			[branch]
@@ -268,13 +254,11 @@ float4 BlurPS(float4 position : SV_Position, float2 texcoord : TEXCOORD ) : SV_T
 		finalcolor = summedSamples;
 	}
 			
-	[branch]
-	if (HDR_DISPLAY_OUTPUT) {
-		return finalcolor;
-	} else {
+	if (!HDR_DISPLAY_OUTPUT) {
 		finalcolor *= 1.0 / max(dot(summedSamples.rgb, lumCoeffGamma), 1.0);
-		return clamp(finalcolor, 0.0, 1.0);
+		clamp(finalcolor, 0.0, 1.0);
 	}
+	return finalcolor;
 }
 
 technique LinearMotionBlur
